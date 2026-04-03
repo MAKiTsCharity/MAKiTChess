@@ -3,7 +3,7 @@ from data import Pieces
 from PIL import ImageTk,Image
 import math
 
-from MoveSolver import validMoves, movePiece
+from MoveSolver import validMoves, movePiece, sign
 
 
 turn = True
@@ -17,8 +17,22 @@ selectedValidMoves = []
 def updateBoard():
     for x in range(10):
         for y in range(10):
-            colours = ["#aa6611","#d2aa99","#8b6f4d","#c7b8b2", "#da4070", "#ecd052"]
-            canvas.create_rectangle((x*boardSize/10, y*boardSize/10), ((x+1)*boardSize/10, (y+1)*boardSize/10), fill=((colours[(x+y)%2] if (x%9) and (y%9) else colours[(x+y)%2+2]) if selectedPiece<0 else (colours[4] if x==Pieces[selectedPiece]["pos"][0] and y==Pieces[selectedPiece]["pos"][1] else (colours[(x+y)%2] if (x%9) and (y%9) else colours[(x+y)%2+2]))) if [x,y] not in selectedValidMoves else colours[5])
+            colours = ["#aa6611","#d2aa99","#8b6f4d","#c7b8b2", "#da4070", "#ecd052", "#52aeec"]
+            selectedColour = colours[(x+y)%2 + 2*(x==0 or x==9 or y==0 or y==9)]
+
+            if [x,y] == Pieces[selectedPiece]["pos"]:
+                selectedColour = colours[4]
+            
+            if [x,y] in selectedValidMoves:
+                selectedColour = colours[5]
+
+            if len(selectedValidMoves):
+                if len(selectedValidMoves[0]) > 2:
+                    for selectedValidMove in selectedValidMoves:
+                        if x == Pieces[selectedValidMove[0]]["pos"][0] + 2*selectedValidMove[2] and y==Pieces[selectedValidMove[0]]["pos"][1]:
+                            selectedColour = colours[6]
+
+            canvas.create_rectangle((x*boardSize/10, y*boardSize/10), ((x+1)*boardSize/10, (y+1)*boardSize/10), fill=selectedColour)
 
     for piece in Pieces:
         canvas.create_image(
@@ -32,20 +46,52 @@ def on_left_click(event):
     global turn
     global Pieces
 
+    hasMoved = False
+
     squareX = math.floor(event.x/(boardSize/10))
     squareY = math.floor(event.y/(boardSize/10))
 
-    if [squareX,squareY] in selectedValidMoves:
-        Pieces = movePiece(Pieces, selectedPiece, [squareX,squareY])
-        turn = not turn
-    else:
+    print(f"SELECTED VALID MOVES {selectedValidMoves}")
+
+    if len(selectedValidMoves):
+        if len(selectedValidMoves[0])==2:
+            if [squareX,squareY] in selectedValidMoves:
+
+                # sign(Pieces[secondPiece]["pos"][0] - Pieces[selectedPiece]["pos"][0])
+
+                Pieces = movePiece(Pieces, selectedPiece, [squareX,squareY])
+                hasMoved = True
+                turn = not turn
+        else:
+            if squareY == Pieces[selectedValidMoves[0][0]]["pos"][1]:
+                for selectedValidMove in selectedValidMoves:
+                    if squareX == Pieces[selectedValidMoves[0][0]]["pos"][0] + 2*selectedValidMove[2]:
+                        Pieces = movePiece(Pieces, selectedPiece, selectedValidMove)
+                        turn = not turn
+                        hasMoved = True
+
+    if not hasMoved:
         for piece in Pieces:
             if piece["pos"][0] == squareX and piece["pos"][1] == squareY:
                 selectedPiece = piece["id"]
                 break
 
+    print(f"SELPIECE: {selectedPiece}")
+
     if selectedPiece >= 0:
         selectedValidMoves = validMoves(Pieces, Pieces[selectedPiece], turn)
+
+
+
+    # if len(selectedValidMoves)>0:
+    #     if len(selectedValidMoves[0])==3:
+    #         print("HASTOCASTLE")
+    #         parsedMoves = []
+    #         for selectedValidMove in selectedValidMoves:
+    #             parsedMoves.append([Pieces[selectedValidMove[0]]["pos"][0]+2*selectedValidMove[2],Pieces[selectedValidMove[0]]["pos"][1]])
+    #         selectedValidMoves = parsedMoves
+
+    print(f"SELMOVES: {selectedValidMoves}")
 
     updateBoard()
 
